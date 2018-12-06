@@ -7,16 +7,18 @@ import (
 
 //var tweet *domain.Tweet
 
-var tweets []*domain.Tweet
-var tweetsByUser map[string][]*domain.Tweet
-
-func InitializeService(){
-	tweets = make([]*domain.Tweet, 0)
-	tweetsByUser = make(map[string][]*domain.Tweet)
+type TweetManager struct{
+	tweets []*domain.Tweet
+	tweetsByUser map[string][]*domain.Tweet
 }
 
-func PublishTweet( aTweet *domain.Tweet ) (int, error){
+func NewTweetManager()(*TweetManager){
+	tweets := make([]*domain.Tweet, 0)
+	tweetsByUser := make(map[string][]*domain.Tweet)
+	return &TweetManager{tweets, tweetsByUser}
+}
 
+func (v *TweetManager) PublishTweet( aTweet *domain.Tweet ) (int, error){
 	if aTweet.Text == "" {
 		return 0, errors.New("text is required")
 	}
@@ -28,34 +30,34 @@ func PublishTweet( aTweet *domain.Tweet ) (int, error){
 		return 0, errors.New("text exceding 140 characters")
 	}
 
-	tweets = append(tweets, aTweet)
+	v.tweets = append(v.tweets, aTweet)
 
-	addTweetByUser( aTweet )
+	v.addTweetByUser( aTweet )
 
 	return aTweet.Id, nil
 }
 
-func addTweetByUser( aTweet *domain.Tweet ){
-	userTweets, exist := tweetsByUser[aTweet.User]
+func (v *TweetManager)addTweetByUser( aTweet *domain.Tweet ){
+	userTweets, exist := v.tweetsByUser[aTweet.User]
 	if !exist{
 		newTweetsByUser := []*domain.Tweet{aTweet}
-		tweetsByUser[aTweet.User]=newTweetsByUser
+		v.tweetsByUser[aTweet.User]=newTweetsByUser
 	}else{
 		userTweets = append(userTweets, aTweet)
-		tweetsByUser[aTweet.User]=userTweets
+		v.tweetsByUser[aTweet.User]=userTweets
 	}
 }
 
-func GetTweetById(id int)(*domain.Tweet){
-	for i:=0 ; i < len(tweets); i++ {
-		if tweets[i].Id == id{
-			return tweets[i]
+func (v *TweetManager)GetTweetById(id int)(*domain.Tweet){
+	for i:=0 ; i < len(v.tweets); i++ {
+		if v.tweets[i].Id == id{
+			return v.tweets[i]
 	    }
 	}
 	return nil
 }
 
-func CountTweetsByUser(user string) (int){
+func (v *TweetManager)CountTweetsByUser(user string) (int){
 /*	var count int
 	for _, aTweet := range tweets{
 		if aTweet.User == user{
@@ -64,7 +66,7 @@ func CountTweetsByUser(user string) (int){
 	}
 	return count*/
 
-	userTweets, exist := tweetsByUser[user]
+	userTweets, exist := v.tweetsByUser[user]
 	if exist{
 		return len(userTweets)
 	}
@@ -72,16 +74,16 @@ func CountTweetsByUser(user string) (int){
 
 }
 
-func GetTweet() (*domain.Tweet){
-	return tweets[len(tweets)-1]
+func (v *TweetManager) GetLastTweet() (*domain.Tweet){
+	return v.tweets[len(v.tweets)-1]
 }
 
-func GetTweets() ([]*domain.Tweet){
-	return tweets
+func (v *TweetManager) GetTweets() ([]*domain.Tweet){
+	return v.tweets
 }
 
-func GetTweetsByUser(user string) ( []*domain.Tweet ){
-	userTweets, exist := tweetsByUser[user]
+func (v *TweetManager) GetTweetsByUser(user string) ( []*domain.Tweet ){
+	userTweets, exist := v.tweetsByUser[user]
 	if exist{
 		return userTweets
 	}

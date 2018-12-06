@@ -8,6 +8,7 @@ import (
 
 func main() {
 
+	tweetManager := service.NewTweetManager()
 	shell := ishell.New()
 	shell.SetPrompt("Tweeter >> ")
 	shell.Print("Type 'help' to know commands\n")
@@ -30,7 +31,7 @@ func main() {
 			//dateNow := time.Now().Local()
 			var newTweet = domain.NewTweet(user, tweet)
 
-			error := service.PublishTweet(newTweet)
+			_, error := tweetManager.PublishTweet(newTweet)
 
 			if error == nil {
 				c.Print("Tweet sent\n")
@@ -49,7 +50,7 @@ func main() {
 
 			defer c.ShowPrompt(true)
 
-			tweet := service.GetTweet()
+			tweet := tweetManager.GetLastTweet()
 
 			c.Println(tweet)
 
@@ -62,8 +63,8 @@ func main() {
 		Help: "Shows a tweet",
 		Func: func(c *ishell.Context){
 			defer c.ShowPrompt(true)
-			tweet := service.GetTweets()
-			c.Printf("%v", tweet)
+			tweets := tweetManager.GetTweets()
+			c.Printf("%v", tweets)
 		},
 	})
 
