@@ -10,7 +10,9 @@ import (
 
 func TestPublishedTweetIsSaved(t *testing.T){
 	var tweet domain.Tweet;
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet1user, tweet1text string = "Luciano", "HolaMundo!"
 	tweet = domain.NewTextTweet(tweet1user, tweet1text)
 
@@ -30,7 +32,9 @@ func TestPublishedTweetIsSaved(t *testing.T){
 
 func TestWithoutUserIsNotPublished(t *testing.T){
 	// Initialization
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet domain.Tweet
 
 	var user string
@@ -50,7 +54,9 @@ func TestWithoutUserIsNotPublished(t *testing.T){
 
 func TestTweetWithoutTextIsNotPublished(t *testing.T){
 	// Initialization
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet domain.Tweet
 	assert := assert.New(t)
 
@@ -70,7 +76,9 @@ func TestTweetWithoutTextIsNotPublished(t *testing.T){
 
 func TestTweetWichExceeding140CharactersIsNotPublished(t *testing.T){
 	// Initialization
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet domain.Tweet
 	assert := assert.New(t)
 
@@ -92,7 +100,9 @@ func TestTweetWichExceeding140CharactersIsNotPublished(t *testing.T){
 
 func TestCanPublishAndretrieveMoreThanOneTweet(t *testing.T){
 	// Initialization
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	assert := assert.New(t)
 	var tweet, secondTweet domain.Tweet // Fill the tweets
 
@@ -126,7 +136,9 @@ func TestCanRetrieveTweetById(t *testing.T){
 
 	// Init
 	assert := assert.New(t)
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 
 	var tweet1user, tweet1text string = "Luciano", "Soy un tweet con id!"
 	tweet := domain.NewTextTweet(tweet1user, tweet1text)
@@ -141,12 +153,12 @@ func TestCanRetrieveTweetById(t *testing.T){
 	assert.Equal(isValidTweet(publishedTweet, tweet1user, tweet1text), true, "Published Tweet is invalid")
 }
 
-
-
 func TestCanCountTheTweetsSentByAnUser(t *testing.T){
 	// Init
 	assert := assert.New(t)
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet1user, tweet1text string = "Luciano", "Hello World!"
 	var tweet2user, tweet2text string = "Daiana", "Hoy, Hice arroz!"
 	var tweet3user, tweet3text string = "Liugi", "Its Me Mario!"
@@ -174,7 +186,9 @@ func TestCanCountTheTweetsSentByAnUser(t *testing.T){
 func TestCanRetrieveTheTweetsSentByAnUser(t *testing.T ){
 	// Init
 	assert := assert.New(t)
-	tweetManager := service.NewTweetManager()
+	var tweetWriter service.TweetWriter
+	tweetWriter =  service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
 	var tweet1user, tweet1text string = "Luciano", "Hello World!"
 	var tweet2user, tweet2text string = "Daiana", "Hoy, Hice arroz!"
 	var tweet3user, tweet3text string = "Liugi", "Its Me Mario!"
@@ -191,10 +205,64 @@ func TestCanRetrieveTheTweetsSentByAnUser(t *testing.T ){
 	tweets := tweetManager.GetTweetsByUser(tweet1user)
 
 	// Validation
-	assert.Equal(  len(tweets)==3, true, "Tweets len(%d) is not 2", len(tweets) )
-
-
-
-
+	assert.Equal( len(tweets)==3, true, "Tweets len(%d) is not 2", len(tweets) )
 
 }
+
+func TestPublishedTweetIsSavedToExternalResources(t *testing.T){
+	// Initialization
+	assert := assert.New(t)
+	var tweetWriter service.TweetWriter
+	tweetWriter = service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
+
+	var tweet domain.Tweet // Fill the tweet with data
+	var tweet1user, tweet1text string = "Luciano", "Hello World!"
+	tweet = domain.NewTextTweet(tweet1user, tweet1text)
+
+	// Operation
+
+	id,_ := tweetManager.PublishTweet(tweet)
+
+	// Validation
+	memoryWriter := (tweetWriter).(*service.MemoryTweetWriter)
+	savedTweet := memoryWriter.GetLastSavedTweet()
+
+	assert.Equal(savedTweet!=nil,true, "Error, tweet was not saved")
+	assert.Equal(savedTweet.GetId()==id,true, "Error, Tweet id do not match")
+}
+
+
+func TestCanSearchForTweetContainingText(t *testing.T){
+	// Initialization
+	assert := assert.New(t)
+	var tweetWriter service.TweetWriter
+	tweetWriter = service.NewMemoryTweetWriter()
+	tweetManager := service.NewTweetManager(tweetWriter)
+
+	/// Create and Publish a Tweet
+	var tweet1user, tweet1text string = "Luciano", "Hello World!"
+	tweetManager.PublishTweet( domain.NewTextTweet(tweet1user, tweet1text) )
+
+	// Operation
+	searchResult := make(chan domain.Tweet)
+	quit := make(chan int)
+	query := "Hello"
+	tweetManager.SearchTweetsContaining(query, searchResult)
+
+	// Validation
+	var foundTweet domain.Tweet
+	select {
+		case foundTweet = <-searchResult:
+		case notFound := <-quit:
+			print("notFound<%d>", notFound)
+	}
+	assert.Equal(foundTweet != nil, true, "Error, foundTweet is nil")
+	assert.Equal(!strings.Contains(foundTweet.GetText(), query), false, "Error, foundTweet dont march with query")
+
+
+		// if foundTweet == nil ..
+		// if !strings.Contains(foundTweet.GetText(), query) ...
+}
+
+

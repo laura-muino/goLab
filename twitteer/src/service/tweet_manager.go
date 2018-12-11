@@ -2,6 +2,7 @@ package service
 
 import (
 	"github.com/golab/twitteer/src/domain"
+	"strings"
 )
 
 //var tweet *domain.Tweet
@@ -9,12 +10,13 @@ import (
 type TweetManager struct{
 	tweets []domain.Tweet
 	tweetsByUser map[string][]domain.Tweet
+	writer TweetWriter
 }
 
-func NewTweetManager()(*TweetManager){
+func NewTweetManager(aTweeterWriter TweetWriter)(*TweetManager){
 	tweets := make([]domain.Tweet, 0)
 	tweetsByUser := make(map[string][]domain.Tweet)
-	return &TweetManager{tweets, tweetsByUser}
+	return &TweetManager{tweets, tweetsByUser, aTweeterWriter}
 }
 
 func (v *TweetManager) PublishTweet( aTweet domain.Tweet ) (int, error){
@@ -23,6 +25,7 @@ func (v *TweetManager) PublishTweet( aTweet domain.Tweet ) (int, error){
 	if valid==nil {
 		v.tweets = append(v.tweets, aTweet)
 		v.addTweetByUser( aTweet )
+		v.writer.Write( aTweet )
 	}
 	return id, valid
 }
@@ -48,13 +51,6 @@ func (v *TweetManager)GetTweetById(id int)(domain.Tweet){
 }
 
 func (v *TweetManager)CountTweetsByUser(user string) (int){
-/*	var count int
-	for _, aTweet := range tweets{
-		if aTweet.GetUser() == user{
-			count++
-	}
-	}
-	return count*/
 
 	userTweets, exist := v.tweetsByUser[user]
 	if exist{
@@ -78,4 +74,16 @@ func (v *TweetManager) GetTweetsByUser(user string) ( []domain.Tweet ){
 		return userTweets
 	}
 	return nil
+}
+
+func (v *TweetManager) SearchTweetsContaining(query string, searchResult chan domain.Tweet) {
+
+	go func(){
+		for _, tweet := range v.tweets {
+			if strings.Contains(tweet.GetText(), query) {
+				searchResult <- tweet
+				return
+			}
+		}
+	}()
 }

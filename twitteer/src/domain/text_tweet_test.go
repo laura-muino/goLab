@@ -6,14 +6,13 @@ import (
 	"testing"
 )
 
-func TestCanGetAPrintableTweet(t *testing.T) {
+func TestTextTweetPrintUserAndText(t *testing.T) {
 	// Initialization
 	assert := assert.New(t)
-	tweet := domain.NewTweet("Luciano", "Hello World!")
+	tweet := domain.NewTextTweet("Luciano", "Hello World!")
 
 	// Operation
-	text := tweet.String()
+	text := tweet.PrintableTweet()
 	expectedText := "@Luciano: Hello World!"
 	assert.Truef(text==expectedText, "Error, '"+text+"' != '"+expectedText+"'")
 }
-

@@ -2,14 +2,15 @@ package domain
 
 import (
 	"errors"
+	"strconv"
 	"time"
 )
 
 type TextTweet struct {
-	Id int
-	User string
-	Text string
-	Date *time.Time
+	Id int `json: "id"`
+	User string `json: "user"`
+	Text string `json: "text"`
+	Date *time.Time `json: "date"`
 }
 
 var id int
@@ -21,7 +22,11 @@ func NewTextTweet(user, text string) (*TextTweet){
 }
 
 func (t *TextTweet)String()(string){
-	return "@"+t.User+": "+t.Text+"\n"
+	return "["+strconv.Itoa(t.Id)+"]"+t.PrintableTweet();
+}
+
+func (t *TextTweet)PrintableTweet()(string){
+	return "@"+t.User+": "+t.Text
 }
 
 func (t *TextTweet) IsValid() (int, error){
